@@ -24,6 +24,9 @@
 
 #include <RadioLib.h>
 
+#include "fix.h"
+#include "fixes.h"
+
 
 void setupDisplay();
 void enableBacklight();
@@ -47,15 +50,15 @@ uint8_t rgb = 0;
 
 TinyGPSPlus     *gps;
 
-double myLat = 0;
-double myLng = 0;
-uint32_t myFixAge = 0;
-uint32_t myFixMillis = 0;
+
+
+Fix myFix;
+Fix theirFix;
+
+Fixes myFixes;
+Fixes theirFixes;
 
 char* techno = (char*) "Techno!";
-uint32_t theirFixMillis = 0;
-double theirLat = 0;
-double theirLng = 0;
 
 
 // flag to indicate that a packet was sent
@@ -75,6 +78,8 @@ int16_t sendBufSize = 0;
 
 uint8_t receiveBuf[200];
 uint16_t receiveBufSize = 0;
+
+int displayState = 0;
 
 
 #define DO_SEND 1
@@ -107,6 +112,29 @@ void setReceivedFlag(void)
     receivedFlag = true;
 }
 
+bool loopTouchPin()
+{
+  static bool lastB = false;
+
+  bool refreshDisplay = false;
+
+  bool b = digitalRead(Touch_Pin);
+
+  if( b && ! lastB )
+  {
+    displayState ++;
+    refreshDisplay = true;
+  }
+
+
+  if( displayState > 5 )
+    displayState = 0;
+
+  lastB = b;  
+
+  return refreshDisplay;
+}
+
 void loop()
 {
 
@@ -114,7 +142,10 @@ void loop()
 
   loopGPS();
   
-  
+  bool refreshDisplay = loopTouchPin();
+
+  if( refreshDisplay)
+    loopDisplay();
 
     if (millis() - blinkMillis > 10000) {
 
@@ -153,7 +184,7 @@ void loop()
 
 void loopSender()
 {
-    encode();
+    sendBufSize = myFix.encode(sendBuf);
 
     //strcpy((char*)sendBuf, "qwerqwerqwerqwerqwerqwerqwerqwrqwerqwerqwer");
 
@@ -197,32 +228,135 @@ void loopSender()
 
 }
 
+
 void loopDisplay(void)
 {
+  if( displayState == 0)
+    displayMap(myFixes, theirFixes, false, "me");
+  else if( displayState == 1)
+    displayMap(theirFixes, myFixes, true, "them");
+  else if( displayState == 2)
+    displayFixes();
+  else if( displayState == 3)
+    displayFix(myFix, "My Fix"); 
+  else if( displayState == 4)
+    displayFix(theirFix, "Their Fix");    
+  else if( displayState == 5)
+    displayFix(theirFix, "Their Fix");    
 
+
+  display->update();
+}
+
+void displayMap(Fixes fixes, Fixes other, bool drawOther, const char*label)
+{
+  Serial.println("map");
+  display->fillScreen(GxEPD_WHITE);
+  //display->drawExampleBitmap(BitmapExample1, 0, 0, GxEPD_WIDTH, GxEPD_HEIGHT, GxEPD_BLACK);
+  display->setCursor(0,20);
+  //display->print("age ");
+  //display->println(myFixAge/1000);
+  display->print(label);
+  display->print(" (");
+  display->print(fixes.numFixes);
+  display->print(")");
+  
+  //display->drawCircle(30,30, 10, GxEPD_BLACK); 
+  //display->drawCircle(50,50,20,GxEPD_BLACK); 
+
+  fixes.calcScale(myFix);
+
+
+  if( drawOther )
+  {
+  // draw us on the map
+
+    for( int i = 0; i < 10 && i < other.numFixes; i ++ )
+    {
+      double mx = fixes.x(other.fixes[i].lng, display->width());
+      double my = fixes.y(other.fixes[i].lat, display->height());
+    
+      display->fillCircle(mx, my, i == 0 ? 10 : 5, GxEPD_BLACK);
+    }
+  }
+
+
+
+  // and draw the
+  double lastX = 0;
+  double lastY = 0;
+
+  for( int i = 0; i < fixes.numFixes; i ++)
+  {
+    Serial.print(i);
+    Serial.print(" ");
+    
+
+    double x = fixes.x(i, display->width());
+    double y = fixes.y(i, display->height());
+
+    Serial.print(x);
+    Serial.print(", ");
+    Serial.println(y);
+
+    if( i == 0 )
+      display->drawCircle(x,y, 10, GxEPD_BLACK); //most recent point
+    else
+      display->drawLine(x, y, lastX, lastY, GxEPD_BLACK);
+
+    lastX = x;
+    lastY = y;
+  }
+
+  Serial.println("mapped");
+}
+
+void displayFix(Fix fix, const char*label)
+{
+  display->fillScreen(GxEPD_WHITE);
+  
+  display->setCursor(0,20);
+  display->println(label);
+  display->printf("%X\n",fix.id);
+  display->print(fix.lat, 6);
+  display->println(",");
+  display->println(fix.lng, 6);
+
+  display->print("age ");
+  display->println(fix.age()/1000);
+  display->print("satellites ");
+  display->println(fix.satellites);
+  display->print("hdop ");
+  display->println(fix.hdop);
+  display->print("volts ");
+  display->println(fix.batteryVoltage);
+   
+}
+
+void displayFixes()
+{
     display->fillScreen(GxEPD_WHITE);
     //display->drawExampleBitmap(BitmapExample1, 0, 0, GxEPD_WIDTH, GxEPD_HEIGHT, GxEPD_BLACK);
     display->setCursor(0,20);
     //display->print("age ");
    //display->println(myFixAge/1000);
    display->print("me ");
-   display->println(myLat, 6);
+   display->println(myFix.lat, 6);
   display->print(", ");
-   display->println(myLng, 6);
+   display->println(myFix.lng, 6);
 
    display->print("t ");
-   display->println(theirLat, 6);
+   display->println(theirFix.lat, 6);
   display->print(", ");
-   display->println(theirLng, 6);
+   display->println(theirFix.lng, 6);
 
-  double distance = TinyGPSPlus::distanceBetween(myLat, myLng, theirLat, theirLng);
-  double heading = TinyGPSPlus::courseTo(myLat, myLng, theirLat, theirLng);
+  
 
- display->print(distance, 1);
+ display->print(myFix.distanceTo(theirFix), 1);
    display->println(" m");
-    display->print(heading, 1);
+    display->print(myFix.headingTo(theirFix), 1);
    display->println(" deg");
-    display->update();
+    
 }
 
 void enableBacklight(bool en)
@@ -427,14 +561,15 @@ void loopReceive()
 
             Serial.println((char*)receiveBuf);
 
-            if( receiveBufSize == msgSize())
+            if( receiveBufSize == sizeof(Fix))
             {
-              decode();
+              theirFix.decode(receiveBuf, receiveBufSize);
+              theirFixes.add(theirFix);
             }
             else
             {
               Serial.print(F("wrong len ( not "));
-               Serial.print(msgSize());
+               Serial.print(sizeof(Fix));
                Serial.println(F(" ), not for us"));
             }
             // print data of the packet
@@ -476,58 +611,7 @@ void loopReceive()
 }
 
 
-uint16_t msgSize()
-{
-  return( strlen(techno) +sizeof(myFixMillis)+sizeof(myLat)+sizeof(myLng));
-  // 7 + 8 + 8 + 4 = 27
-}
 
-void decode()
-{
-  int pos = 0;
-
-  char t[1000];
-
-  strncpy(t, (char*)receiveBuf, msgSize());
-  t[msgSize()]='\0';
-  Serial.println(t);
-  if( 0 != strncmp( (char*)receiveBuf, techno, strlen(techno)))
-  {
-    Serial.println("not techno");
-    return;
-  }
-
-  pos += strlen(techno);
-  
-  memcpy(&theirFixMillis, receiveBuf+pos,sizeof(theirFixMillis));
-  pos+=sizeof(theirFixMillis);
-  
-  memcpy(&theirLat, receiveBuf+pos,sizeof(theirLat));
-  pos+=sizeof(theirLat);
-  
-  memcpy(&theirLng, receiveBuf+pos,sizeof(theirLng));
-  pos+=sizeof(theirLng);
-  
-
-}
-
-void encode()
-{
-  int pos = 0;
-
-  
-  memcpy(sendBuf+pos, techno, strlen(techno));
-  pos += strlen(techno);
-  memcpy(sendBuf+pos, &myFixMillis, sizeof(myFixMillis));
-  pos += sizeof(myFixMillis);
-  memcpy(sendBuf+pos, &myLat, sizeof(myLat));
-  pos += sizeof(myLat);
-  memcpy(sendBuf+pos, &myLng, sizeof(myLng));
-  pos += sizeof(myLng);
-  
-  sendBufSize = pos;
-
-}
 
 
 
@@ -556,7 +640,15 @@ bool setupGPS()
     return true;
 }
 
+uint32_t getMacAddress()
+{
+  // read the mac address
 
+  uint32_t id = NRF_FICR->DEVICEADDR[1] & 0xffff;
+  id = id | (NRF_FICR->DEVICEADDR[0] << 4);
+
+  return id;
+}
 void loopGPS()
 {
     while (SerialGPS.available() > 0)
@@ -565,11 +657,17 @@ void loopGPS()
     if (millis() - last > 5000) {
         if (gps->location.isUpdated()) {
             
-            myLat = gps->location.lat();
-            myLng = gps->location.lng();
-            myFixAge = gps->location.age();
-            myFixMillis = millis() - myFixAge;
-            
+            myFix.id =  getMacAddress();
+            myFix.lat = gps->location.lat();
+            myFix.lng = gps->location.lng();
+            myFix.ageWhenReceived = gps->location.age();
+            myFix.timeWhenReceived = millis();
+            myFix.hdop = gps->hdop.value();
+            myFix.satellites = gps->satellites.value();
+            myFix.batteryVoltage = 0.0; //TODO
+           
+            myFixes.add(myFix);
+
             SerialMon.print(F("LOCATION   Fix Age="));
             SerialMon.print(gps->location.age());
             SerialMon.print(F("ms Raw Lat="));
