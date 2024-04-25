@@ -122,23 +122,101 @@ bool loopTouchPin()
 
   if( b && ! lastB )
   {
-    displayState ++;
+    nextDisplayState();
     refreshDisplay = true;
   }
 
-
-  if( displayState > 5 )
-    displayState = 0;
 
   lastB = b;  
 
   return refreshDisplay;
 }
 
+#define DISPLAY_STATE_MY_MAP 0
+#define DISPLAY_STATE_THEIR_MAP 1
+#define DISPLAY_STATE_FIXES 2
+#define DISPLAY_STATE_MY_FIX 3
+#define DISPLAY_STATE_THEIR_FIX 4
+
+void nextDisplayState()
+{
+
+  if(DO_RECEIVE && ! DO_SEND)
+  {
+    switch( displayState )
+    {
+      case DISPLAY_STATE_MY_MAP:
+        displayState = DISPLAY_STATE_THEIR_MAP;
+        break;
+
+      case DISPLAY_STATE_THEIR_MAP:
+        displayState = DISPLAY_STATE_FIXES;
+        break;
+
+      case DISPLAY_STATE_FIXES:
+       displayState = DISPLAY_STATE_THEIR_FIX;
+        break;
+
+      case DISPLAY_STATE_MY_FIX:
+      case DISPLAY_STATE_THEIR_FIX:
+      default:
+        displayState = DISPLAY_STATE_THEIR_MAP;
+        break; 
+    }
+  }
+  else if(!DO_RECEIVE && DO_SEND)
+  {
+    switch( displayState )
+    {
+      case DISPLAY_STATE_MY_MAP:
+      case DISPLAY_STATE_THEIR_MAP:
+        displayState = DISPLAY_STATE_FIXES;
+        break;
+
+      case DISPLAY_STATE_FIXES:
+       displayState = DISPLAY_STATE_MY_FIX;
+        break;
+
+      case DISPLAY_STATE_MY_FIX:
+      case DISPLAY_STATE_THEIR_FIX:
+      default:
+        displayState = DISPLAY_STATE_MY_MAP;
+        break; 
+    }
+  }
+  else // both
+  {
+    switch( displayState )
+    {
+      case DISPLAY_STATE_MY_MAP:
+        displayState = DISPLAY_STATE_THEIR_MAP;
+        break;
+
+      case DISPLAY_STATE_THEIR_MAP:
+        displayState = DISPLAY_STATE_FIXES;
+        break;
+
+      case DISPLAY_STATE_FIXES:
+       displayState = DISPLAY_STATE_MY_FIX;
+        break;
+
+      case DISPLAY_STATE_MY_FIX:
+        displayState = DISPLAY_STATE_THEIR_FIX;
+        break;
+
+      case DISPLAY_STATE_THEIR_FIX:
+      default:
+        displayState = DISPLAY_STATE_MY_MAP;
+        break; 
+    }
+  }
+}
+
 void loop()
 {
 
-  loopReceive();
+  if( DO_RECEIVE )
+    loopReceive();
 
   loopGPS();
   
@@ -229,22 +307,21 @@ void loopSender()
 }
 
 
+
+
 void loopDisplay(void)
 {
-  if( displayState == 0)
+  if( displayState == DISPLAY_STATE_MY_MAP)
     displayMap(myFixes, theirFixes, false, "me");
-  else if( displayState == 1)
+  else if( displayState == DISPLAY_STATE_THEIR_MAP)
     displayMap(theirFixes, myFixes, true, "them");
-  else if( displayState == 2)
+  else if( displayState == DISPLAY_STATE_FIXES)
     displayFixes();
-  else if( displayState == 3)
+  else if( displayState == DISPLAY_STATE_MY_FIX)
     displayFix(myFix, "My Fix"); 
-  else if( displayState == 4)
+  else if( displayState == DISPLAY_STATE_THEIR_FIX)
     displayFix(theirFix, "Their Fix");    
-  else if( displayState == 5)
-    displayFix(theirFix, "Their Fix");    
-
-
+  
   display->update();
 }
 
@@ -520,14 +597,17 @@ bool setupLoRa()
         Serial.println(state);
         while (true);
     }
-    // set the function that will be called
-    // when new packet is received
-    radio.setPacketReceivedAction(setReceivedFlag);
 
-    // start listening for LoRa packets
-    Serial.print(F("[SX1276] Starting to listen ... "));
-    state = radio.startReceive();
+    if( DO_RECEIVE )
+    {
+      // set the function that will be called
+      // when new packet is received
+      radio.setPacketReceivedAction(setReceivedFlag);
 
+      // start listening for LoRa packets
+      Serial.print(F("[SX1276] Starting to listen ... "));
+      state = radio.startReceive();
+    }
 
     SerialMon.println(" success");
     return true;
