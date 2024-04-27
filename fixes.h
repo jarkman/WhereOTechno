@@ -7,7 +7,7 @@ class Fixes
 {
   public:
 
-  #define NUM_FIXES 10
+  #define NUM_FIXES 20  // 20 works 50 doesn't
   #define MIN_AGE 1000L // TODO - increase
 
   Fix fixes[NUM_FIXES+1];
@@ -22,7 +22,7 @@ class Fixes
 
   bool add( Fix fix )
   {
-    Serial.println("add");
+    //Serial.println("add");
 
     if( numFixes > 0 )
     {
@@ -40,7 +40,7 @@ class Fixes
       }
     }
 
-    Serial.println("moving");
+    //Serial.println("moving");
     // move them all down
     for(int i = numFixes; i >= 1; i -- )
       fixes[i] = fixes[i-1];
@@ -51,7 +51,7 @@ class Fixes
 
     fixes[0] = fix;
 
-    Serial.println("added");
+    //Serial.println("added");
     return true;
   };
 
@@ -83,11 +83,24 @@ class Fixes
     }
 
     range = max(maxLat-minLat,maxLng-minLng);
-    if( range < 0.00000001 )
-      range = 0.00000001 ; // protect from div/0
+
+    double minRangeM = 10.0;
+    float minRangeDeg = degForM(minRangeM);
+    if( range < minRangeDeg )
+      range = minRangeDeg ; // protect from div/0
 
     range = range * 1.2; //give us a margin
 
+  };
+
+  double degForM(double m)
+  {
+    // one degree of lat is 111,111m
+    float mPerDeg = 111111;
+    
+    float deg = m / mPerDeg;
+
+    return deg;
   };
 
   double x( int i, double screenWidth )
@@ -100,6 +113,13 @@ class Fixes
     return y(fixes[i].lat, screenHeight);
   };
   
+  double pixForM(float m, double screenWidth)
+  {
+    double deg = degForM(m);
+    double p = screenWidth * deg/range;
+    return p;
+  }
+
   double x( double lng, double screenWidth )
   {
     return screenWidth/2.0 + screenWidth * (lng - ((minLng+maxLng)/2.0))/range;
@@ -107,7 +127,7 @@ class Fixes
 
   double y( double lat, double screenHeight )
   {
-    return screenHeight/2.0 + screenHeight * (lat - ((minLat+maxLat)/2.0))/range;
+    return screenHeight - (screenHeight/2.0 + screenHeight * (lat - ((minLat+maxLat)/2.0))/range);
   };
 
 };

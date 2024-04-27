@@ -3,7 +3,13 @@
 
  runs on Lilygo T-Echo
 
- select Nordic nRF52840 DKit something
+ select Nordic nRF52840 DK something
+
+ 
+
+ getting-started: https://github.com/Xinyuan-LilyGO/T-Echo
+
+
  */
 
 #include "utilities.h"
@@ -154,7 +160,7 @@ void nextDisplayState()
         break;
 
       case DISPLAY_STATE_FIXES:
-       displayState = DISPLAY_STATE_THEIR_FIX;
+        displayState = DISPLAY_STATE_THEIR_FIX;
         break;
 
       case DISPLAY_STATE_MY_FIX:
@@ -325,9 +331,10 @@ void loopDisplay(void)
   display->update();
 }
 
+
 void displayMap(Fixes fixes, Fixes other, bool drawOther, const char*label)
 {
-  Serial.println("map");
+  //Serial.println("map");
   display->fillScreen(GxEPD_WHITE);
   //display->drawExampleBitmap(BitmapExample1, 0, 0, GxEPD_WIDTH, GxEPD_HEIGHT, GxEPD_BLACK);
   display->setCursor(0,20);
@@ -343,6 +350,8 @@ void displayMap(Fixes fixes, Fixes other, bool drawOther, const char*label)
 
   fixes.calcScale(myFix);
 
+  double lastX = 0;
+  double lastY = 0;
 
   if( drawOther )
   {
@@ -353,39 +362,42 @@ void displayMap(Fixes fixes, Fixes other, bool drawOther, const char*label)
       double mx = fixes.x(other.fixes[i].lng, display->width());
       double my = fixes.y(other.fixes[i].lat, display->height());
     
-      display->fillCircle(mx, my, i == 0 ? 10 : 5, GxEPD_BLACK);
+      display->fillCircle(mx, my, i == 0 ? 4 : 2, GxEPD_BLACK);
+
+      if( i > 0 )
+       display->drawLine(mx, my, lastX, lastY, GxEPD_BLACK);
+
+      lastX = mx;
+      lastY = my;
     }
+
+    
   }
 
+  // draw a 10m square in the screen center
+  double cw = fixes.pixForM(10, display->width());
+  double r1 = display->width()/2.0 - cw/2.0;
+  
+  display->drawRect(r1, r1, cw, cw, 0);
 
-
-  // and draw the
-  double lastX = 0;
-  double lastY = 0;
+  
 
   for( int i = 0; i < fixes.numFixes; i ++)
   {
-    Serial.print(i);
-    Serial.print(" ");
-    
-
+ 
     double x = fixes.x(i, display->width());
     double y = fixes.y(i, display->height());
 
-    Serial.print(x);
-    Serial.print(", ");
-    Serial.println(y);
+    display->drawCircle(x,y, i == 0 ? 4 : 2, GxEPD_BLACK);
 
-    if( i == 0 )
-      display->drawCircle(x,y, 10, GxEPD_BLACK); //most recent point
-    else
-      display->drawLine(x, y, lastX, lastY, GxEPD_BLACK);
+    if( i > 0 )
+       display->drawLine(x, y, lastX, lastY, GxEPD_BLACK);
 
     lastX = x;
     lastY = y;
   }
 
-  Serial.println("mapped");
+  //Serial.println("mapped");
 }
 
 void displayFix(Fix fix, const char*label)
@@ -644,6 +656,7 @@ void loopReceive()
             if( receiveBufSize == sizeof(Fix))
             {
               theirFix.decode(receiveBuf, receiveBufSize);
+
               theirFixes.add(theirFix);
             }
             else
@@ -657,19 +670,19 @@ void loopReceive()
             //Serial.println(str);
 
             // print RSSI (Received Signal Strength Indicator)
-            Serial.print(F("[SX1276] RSSI:\t\t"));
-            Serial.print(radio.getRSSI());
-            Serial.println(F(" dBm"));
+            //Serial.print(F("[SX1276] RSSI:\t\t"));
+            //Serial.print(radio.getRSSI());
+            //Serial.println(F(" dBm"));
 
             // print SNR (Signal-to-Noise Ratio)
-            Serial.print(F("[SX1276] SNR:\t\t"));
-            Serial.print(radio.getSNR());
-            Serial.println(F(" dB"));
+            //Serial.print(F("[SX1276] SNR:\t\t"));
+            //Serial.print(radio.getSNR());
+            //Serial.println(F(" dB"));
 
             // print frequency error
-            Serial.print(F("[SX1276] Frequency error:\t"));
-            Serial.print(radio.getFrequencyError());
-            Serial.println(F(" Hz"));
+            //Serial.print(F("[SX1276] Frequency error:\t"));
+            //Serial.print(radio.getFrequencyError());
+            //Serial.println(F(" Hz"));
 
         } else if (state == RADIOLIB_ERR_CRC_MISMATCH) {
             // packet was received, but is malformed
@@ -747,7 +760,7 @@ void loopGPS()
             myFix.batteryVoltage = 0.0; //TODO
            
             myFixes.add(myFix);
-
+/*
             SerialMon.print(F("LOCATION   Fix Age="));
             SerialMon.print(gps->location.age());
             SerialMon.print(F("ms Raw Lat="));
@@ -764,9 +777,11 @@ void loopGPS()
             SerialMon.print(gps->location.lat(), 6);
             SerialMon.print(F(" Long="));
             SerialMon.println(gps->location.lng(), 6);
+            */
         }
 
         else if (gps->date.isUpdated()) {
+          /*
             SerialMon.print(F("DATE       Fix Age="));
             SerialMon.print(gps->date.age());
             SerialMon.print(F("ms Raw="));
@@ -777,9 +792,11 @@ void loopGPS()
             SerialMon.print(gps->date.month());
             SerialMon.print(F(" Day="));
             SerialMon.println(gps->date.day());
+            */
         }
 
         else if (gps->time.isUpdated()) {
+          /*
             SerialMon.print(F("TIME       Fix Age="));
             SerialMon.print(gps->time.age());
             SerialMon.print(F("ms Raw="));
@@ -792,9 +809,11 @@ void loopGPS()
             SerialMon.print(gps->time.second());
             SerialMon.print(F(" Hundredths="));
             SerialMon.println(gps->time.centisecond());
+            */
         }
 
         else if (gps->speed.isUpdated()) {
+          /*
             SerialMon.print(F("SPEED      Fix Age="));
             SerialMon.print(gps->speed.age());
             SerialMon.print(F("ms Raw="));
@@ -807,18 +826,22 @@ void loopGPS()
             SerialMon.print(gps->speed.mps());
             SerialMon.print(F(" km/h="));
             SerialMon.println(gps->speed.kmph());
+            */
         }
 
         else if (gps->course.isUpdated()) {
+          /*
             SerialMon.print(F("COURSE     Fix Age="));
             SerialMon.print(gps->course.age());
             SerialMon.print(F("ms Raw="));
             SerialMon.print(gps->course.value());
             SerialMon.print(F(" Deg="));
             SerialMon.println(gps->course.deg());
+            */
         }
 
         else if (gps->altitude.isUpdated()) {
+          /*
             SerialMon.print(F("ALTITUDE   Fix Age="));
             SerialMon.print(gps->altitude.age());
             SerialMon.print(F("ms Raw="));
@@ -831,20 +854,25 @@ void loopGPS()
             SerialMon.print(gps->altitude.kilometers());
             SerialMon.print(F(" Feet="));
             SerialMon.println(gps->altitude.feet());
+            */
         }
 
         else if (gps->satellites.isUpdated()) {
+          /*
             SerialMon.print(F("SATELLITES Fix Age="));
             SerialMon.print(gps->satellites.age());
             SerialMon.print(F("ms Value="));
             SerialMon.println(gps->satellites.value());
+            */
         }
 
         else if (gps->hdop.isUpdated()) {
+          /*
             SerialMon.print(F("HDOP       Fix Age="));
             SerialMon.print(gps->hdop.age());
             SerialMon.print(F("ms Value="));
             SerialMon.println(gps->hdop.value());
+            */
         }
 
         if (gps->charsProcessed() < 10)
