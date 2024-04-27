@@ -357,12 +357,12 @@ void displayMap(Fixes fixes, Fixes other, bool drawOther, const char*label)
   {
   // draw us on the map
 
-    for( int i = 0; i < 10 && i < other.numFixes; i ++ )
+    for( int i = 0; i < other.numFixes; i ++ )
     {
       double mx = fixes.x(other.fixes[i].lng, display->width());
       double my = fixes.y(other.fixes[i].lat, display->height());
     
-      display->fillCircle(mx, my, i == 0 ? 4 : 2, GxEPD_BLACK);
+      display->fillCircle(mx, my, i == 0 ? 8 : 4, GxEPD_BLACK);
 
       if( i > 0 )
        display->drawLine(mx, my, lastX, lastY, GxEPD_BLACK);
@@ -742,24 +742,37 @@ uint32_t getMacAddress()
 
   return id;
 }
+
+
 void loopGPS()
 {
+  static bool firstFix = true;
+
+
     while (SerialGPS.available() > 0)
         gps->encode(SerialGPS.read());
 
     if (millis() - last > 5000) {
         if (gps->location.isUpdated()) {
             
-            myFix.id =  getMacAddress();
-            myFix.lat = gps->location.lat();
-            myFix.lng = gps->location.lng();
-            myFix.ageWhenReceived = gps->location.age();
-            myFix.timeWhenReceived = millis();
-            myFix.hdop = gps->hdop.value();
-            myFix.satellites = gps->satellites.value();
-            myFix.batteryVoltage = 0.0; //TODO
-           
-            myFixes.add(myFix);
+            if( ! firstFix )
+            {
+              
+
+              myFix.id =  getMacAddress();
+              myFix.lat = gps->location.lat();
+              myFix.lng = gps->location.lng();
+              myFix.ageWhenReceived = gps->location.age();
+              myFix.timeWhenReceived = millis();
+              myFix.hdop = gps->hdop.value();
+              myFix.satellites = gps->satellites.value();
+              myFix.batteryVoltage = 0.0; //TODO
+            
+              myFixes.add(myFix);
+            }
+
+            firstFix = false;
+            
 /*
             SerialMon.print(F("LOCATION   Fix Age="));
             SerialMon.print(gps->location.age());

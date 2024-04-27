@@ -38,6 +38,13 @@ class Fixes
         fixes[0] = fix;
         return false;
       }
+
+
+      if( fix.hdop > 160 )
+      {
+        Serial.println("bad hdop");
+        return false;
+      }
     }
 
     //Serial.println("moving");
