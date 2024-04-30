@@ -8,6 +8,9 @@ class Fixes
   public:
 
   #define NUM_FIXES 20  // 20 works 50 doesn't
+  // 5 9852
+  // 50  14892
+  // 500 65292
   #define MIN_AGE 1000L // TODO - increase
 
   Fix fixes[NUM_FIXES+1];
@@ -49,7 +52,7 @@ class Fixes
 
     //Serial.println("moving");
     // move them all down
-    for(int i = numFixes; i >= 1; i -- )
+    for(int i = numFixes-1; i >= 1; i -- )
       fixes[i] = fixes[i-1];
     numFixes ++;
 

@@ -9,6 +9,8 @@
 
  getting-started: https://github.com/Xinyuan-LilyGO/T-Echo
 
+ memory layout facts: https://learn.adafruit.com/bluefruit-nrf52-feather-learning-guide/hathach-memory-map#sram-layout-39-8
+
 
  */
 
@@ -95,7 +97,7 @@ int displayState = 0;
 void setup()
 {
     Serial.begin(115200);
-    delay(200);
+    delay(4000);
     boardInit();
     delay(200);
    
@@ -221,22 +223,37 @@ void nextDisplayState()
 void loop()
 {
 
+  Serial.print("loop1\n");
+
+
   if( DO_RECEIVE )
     loopReceive();
+Serial.print("loop2\n");
 
   loopGPS();
   
+  Serial.print("loop3\n");
+
   bool refreshDisplay = loopTouchPin();
+Serial.print("loop4\n");
 
   if( refreshDisplay)
     loopDisplay();
+Serial.print("loop5\n");
 
     if (millis() - blinkMillis > 10000) {
+Serial.print("loop6\n");
 
       loopDisplay();
+      Serial.print("loop7\n");
+
       if( DO_SEND )
       {
+        Serial.print("loop8\n");
+
         loopSender();
+        Serial.print("loop9\n");
+
       }
 
         blinkMillis = millis();
@@ -264,6 +281,8 @@ void loop()
     }
   //display->print("hello!")   ;
   //display->update();
+  Serial.print("loop end\n");
+
 }
 
 void loopSender()
@@ -334,21 +353,33 @@ void loopDisplay(void)
 
 void displayMap(Fixes fixes, Fixes other, bool drawOther, const char*label)
 {
-  //Serial.println("map");
+  Serial.println("map1");
   display->fillScreen(GxEPD_WHITE);
   //display->drawExampleBitmap(BitmapExample1, 0, 0, GxEPD_WIDTH, GxEPD_HEIGHT, GxEPD_BLACK);
   display->setCursor(0,20);
   //display->print("age ");
   //display->println(myFixAge/1000);
+
+    Serial.println("map2");
+ 
+
   display->print(label);
   display->print(" (");
+
+    Serial.println("map3");
+ 
   display->print(fixes.numFixes);
   display->print(")");
   
+    Serial.println("map4");
+ 
   //display->drawCircle(30,30, 10, GxEPD_BLACK); 
   //display->drawCircle(50,50,20,GxEPD_BLACK); 
 
   fixes.calcScale(myFix);
+
+  Serial.println("map5");
+ 
 
   double lastX = 0;
   double lastY = 0;
@@ -359,6 +390,8 @@ void displayMap(Fixes fixes, Fixes other, bool drawOther, const char*label)
 
     for( int i = 0; i < other.numFixes; i ++ )
     {
+        Serial.println("map6");
+ 
       double mx = fixes.x(other.fixes[i].lng, display->width());
       double my = fixes.y(other.fixes[i].lat, display->height());
     
@@ -374,16 +407,21 @@ void displayMap(Fixes fixes, Fixes other, bool drawOther, const char*label)
     
   }
 
+  Serial.println("map7");
+ 
   // draw a 10m square in the screen center
   double cw = fixes.pixForM(10, display->width());
   double r1 = display->width()/2.0 - cw/2.0;
   
   display->drawRect(r1, r1, cw, cw, 0);
 
-  
+    Serial.println("map8");
+ 
 
   for( int i = 0; i < fixes.numFixes; i ++)
   {
+ 
+    Serial.println("map9");
  
     double x = fixes.x(i, display->width());
     double y = fixes.y(i, display->height());
@@ -395,8 +433,13 @@ void displayMap(Fixes fixes, Fixes other, bool drawOther, const char*label)
 
     lastX = x;
     lastY = y;
+
+       Serial.println("map9");
+ 
   }
 
+  Serial.println("map end");
+ 
   //Serial.println("mapped");
 }
 
@@ -508,6 +551,7 @@ void boardInit()
 #ifdef HIGH_VOLTAGE
     configVDD();
 #endif
+    Serial.print("1\n");
 
     SerialMon.begin(MONITOR_SPEED);
     // delay(5000);
@@ -544,14 +588,20 @@ void boardInit()
     digitalWrite(RedLed_Pin, HIGH);
     digitalWrite(BlueLed_Pin, HIGH);
 
+    Serial.print("2\n");
     setupDisplay();
 
+    Serial.print("3\n");
     setupGPS();
 
+    Serial.print("4\n");
     setupLoRa();
 
+    Serial.print("5\n");
     display->update();
     delay(500);
+    Serial.print("6\n");
+
 
 }
 
@@ -772,7 +822,7 @@ void loopGPS()
             }
 
             firstFix = false;
-            
+
 /*
             SerialMon.print(F("LOCATION   Fix Age="));
             SerialMon.print(gps->location.age());
