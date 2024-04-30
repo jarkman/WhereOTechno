@@ -7,10 +7,18 @@ class Fixes
 {
   public:
 
-  #define NUM_FIXES 20  // 20 works 50 doesn't
-  // 5 9852
-  // 50  14892
-  // 500 65292
+  #define NUM_FIXES 800  
+  // when the two global Fixes are statically allocated, 20 works 50 doesn't
+  // when they are on the heap it works (ie, does not crash) with 800
+  // might yet be achingly slow to draw though
+
+
+  // 240k available
+  // One fix is ~120 bytes
+  // so ~2000 fixes should be possible
+  // remember we have 2 of these so maybe 800 is a rational max
+  // might need a better way to move them down too!
+
   #define MIN_AGE 1000L // TODO - increase
 
   Fix fixes[NUM_FIXES+1];

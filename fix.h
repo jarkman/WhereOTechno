@@ -13,7 +13,9 @@ class Fix
   uint32_t timeWhenReceived = 0;
   uint32_t satellites = 0;
   int32_t hdop = 0;
-  double batteryVoltage = 0;
+  float batteryVoltage = 0;
+  float rssi = 0;
+  float snr = 0;
 
   bool goodFix()
   {

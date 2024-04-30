@@ -63,8 +63,8 @@ TinyGPSPlus     *gps;
 Fix myFix;
 Fix theirFix;
 
-Fixes myFixes;
-Fixes theirFixes;
+Fixes* myFixes;
+Fixes* theirFixes;
 
 char* techno = (char*) "Techno!";
 
@@ -89,6 +89,7 @@ uint16_t receiveBufSize = 0;
 
 int displayState = 0;
 
+#define CRASH_TRACE 0
 
 #define DO_SEND 1
 #define DO_RECEIVE 1
@@ -96,6 +97,9 @@ int displayState = 0;
 
 void setup()
 {
+    myFixes = new Fixes();
+    theirFixes = new Fixes();
+
     Serial.begin(115200);
     delay(4000);
     boardInit();
@@ -223,36 +227,41 @@ void nextDisplayState()
 void loop()
 {
 
-  Serial.print("loop1\n");
+  if( CRASH_TRACE ) Serial.print("loop1\n");
 
 
   if( DO_RECEIVE )
     loopReceive();
-Serial.print("loop2\n");
+
+  if( CRASH_TRACE ) Serial.print("loop2\n");
 
   loopGPS();
   
-  Serial.print("loop3\n");
+  if( CRASH_TRACE ) Serial.print("loop3\n");
 
   bool refreshDisplay = loopTouchPin();
-Serial.print("loop4\n");
+
+  if( CRASH_TRACE ) Serial.print("loop4\n");
 
   if( refreshDisplay)
     loopDisplay();
-Serial.print("loop5\n");
+
+  if( CRASH_TRACE ) Serial.print("loop5\n");
 
     if (millis() - blinkMillis > 10000) {
-Serial.print("loop6\n");
+      if( CRASH_TRACE ) Serial.print("loop6\n");
 
       loopDisplay();
-      Serial.print("loop7\n");
+      
+      if( CRASH_TRACE ) Serial.print("loop7\n");
 
       if( DO_SEND )
       {
-        Serial.print("loop8\n");
+        if( CRASH_TRACE ) Serial.print("loop8\n");
 
         loopSender();
-        Serial.print("loop9\n");
+
+        if( CRASH_TRACE ) Serial.print("loop9\n");
 
       }
 
@@ -281,7 +290,7 @@ Serial.print("loop6\n");
     }
   //display->print("hello!")   ;
   //display->update();
-  Serial.print("loop end\n");
+  if( CRASH_TRACE ) Serial.print("loop end\n");
 
 }
 
@@ -351,34 +360,35 @@ void loopDisplay(void)
 }
 
 
-void displayMap(Fixes fixes, Fixes other, bool drawOther, const char*label)
+void displayMap(Fixes *fixes, Fixes *other, bool drawOther, const char*label)
 {
-  Serial.println("map1");
+  if( CRASH_TRACE )  Serial.println("map1");
+
   display->fillScreen(GxEPD_WHITE);
   //display->drawExampleBitmap(BitmapExample1, 0, 0, GxEPD_WIDTH, GxEPD_HEIGHT, GxEPD_BLACK);
   display->setCursor(0,20);
   //display->print("age ");
   //display->println(myFixAge/1000);
 
-    Serial.println("map2");
+  if( CRASH_TRACE ) Serial.println("map2");
  
 
   display->print(label);
   display->print(" (");
 
-    Serial.println("map3");
+  if( CRASH_TRACE ) Serial.println("map3");
  
-  display->print(fixes.numFixes);
+  display->print(fixes->numFixes);
   display->print(")");
   
-    Serial.println("map4");
+  if( CRASH_TRACE ) Serial.println("map4");
  
   //display->drawCircle(30,30, 10, GxEPD_BLACK); 
   //display->drawCircle(50,50,20,GxEPD_BLACK); 
 
-  fixes.calcScale(myFix);
+  fixes->calcScale(myFix);
 
-  Serial.println("map5");
+  if( CRASH_TRACE ) Serial.println("map5");
  
 
   double lastX = 0;
@@ -388,12 +398,12 @@ void displayMap(Fixes fixes, Fixes other, bool drawOther, const char*label)
   {
   // draw us on the map
 
-    for( int i = 0; i < other.numFixes; i ++ )
+    for( int i = 0; i < other->numFixes; i ++ )
     {
-        Serial.println("map6");
+      if( CRASH_TRACE ) Serial.println("map6");
  
-      double mx = fixes.x(other.fixes[i].lng, display->width());
-      double my = fixes.y(other.fixes[i].lat, display->height());
+      double mx = fixes->x(other->fixes[i].lng, display->width());
+      double my = fixes->y(other->fixes[i].lat, display->height());
     
       display->fillCircle(mx, my, i == 0 ? 8 : 4, GxEPD_BLACK);
 
@@ -407,24 +417,24 @@ void displayMap(Fixes fixes, Fixes other, bool drawOther, const char*label)
     
   }
 
-  Serial.println("map7");
+  if( CRASH_TRACE ) Serial.println("map7");
  
   // draw a 10m square in the screen center
-  double cw = fixes.pixForM(10, display->width());
+  double cw = fixes->pixForM(10, display->width());
   double r1 = display->width()/2.0 - cw/2.0;
   
   display->drawRect(r1, r1, cw, cw, 0);
 
-    Serial.println("map8");
+  if( CRASH_TRACE ) Serial.println("map8");
  
 
-  for( int i = 0; i < fixes.numFixes; i ++)
+  for( int i = 0; i < fixes->numFixes; i ++)
   {
  
-    Serial.println("map9");
+    if( CRASH_TRACE ) Serial.println("map9");
  
-    double x = fixes.x(i, display->width());
-    double y = fixes.y(i, display->height());
+    double x = fixes->x(i, display->width());
+    double y = fixes->y(i, display->height());
 
     display->drawCircle(x,y, i == 0 ? 4 : 2, GxEPD_BLACK);
 
@@ -434,11 +444,11 @@ void displayMap(Fixes fixes, Fixes other, bool drawOther, const char*label)
     lastX = x;
     lastY = y;
 
-       Serial.println("map9");
+    if( CRASH_TRACE ) Serial.println("map9");
  
   }
 
-  Serial.println("map end");
+  if( CRASH_TRACE ) Serial.println("map end");
  
   //Serial.println("mapped");
 }
@@ -454,14 +464,24 @@ void displayFix(Fix fix, const char*label)
   display->println(",");
   display->println(fix.lng, 6);
 
-  display->print("age ");
-  display->println(fix.age()/1000);
-  display->print("satellites ");
+  
+  display->print(fix.age()/1000);
+  display->print("s ");
+  
   display->println(fix.satellites);
-  display->print("hdop ");
-  display->println(fix.hdop);
-  display->print("volts ");
-  display->println(fix.batteryVoltage);
+  display->print("sats");
+  
+  display->print("hdp ");
+  display->print(fix.hdop);
+
+  display->print(" snr ");
+  display->println(fix.snr, 0);
+
+  display->print("rssi ");
+  display->print(fix.rssi, 0);
+
+  display->print(" V ");
+  display->println(fix.batteryVoltage, 1);
    
 }
 
@@ -707,7 +727,11 @@ void loopReceive()
             {
               theirFix.decode(receiveBuf, receiveBufSize);
 
-              theirFixes.add(theirFix);
+              theirFix.rssi = radio.getRSSI();
+              theirFix.snr = radio.getSNR();
+              
+
+              theirFixes->add(theirFix);
             }
             else
             {
@@ -818,7 +842,7 @@ void loopGPS()
               myFix.satellites = gps->satellites.value();
               myFix.batteryVoltage = 0.0; //TODO
             
-              myFixes.add(myFix);
+              myFixes->add(myFix);
             }
 
             firstFix = false;
