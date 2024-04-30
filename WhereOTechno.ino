@@ -467,19 +467,16 @@ void displayFix(Fix fix, const char*label)
   
   display->print(fix.age()/1000);
   display->print("s ");
-  
-  display->println(fix.satellites);
-  display->print("sats");
+  display->print(fix.satellites);
+  display->println("sats");
   
   display->print("hdp ");
   display->print(fix.hdop);
-
   display->print(" snr ");
   display->println(fix.snr, 0);
 
   display->print("rssi ");
   display->print(fix.rssi, 0);
-
   display->print(" V ");
   display->println(fix.batteryVoltage, 1);
    
