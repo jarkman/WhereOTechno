@@ -50,9 +50,9 @@ GxIO_Class      *io        = nullptr;
 GxEPD_Class     *display   = nullptr;
 SX1262          radio      = nullptr; 
 
-uint32_t        blinkMillis = 0;
+uint32_t        lastFixSendMillis = 0;
 
-uint32_t        last = 0;
+uint32_t        lastGpsFixMillis = 0;
 
 uint8_t rgb = 0;
 
@@ -88,6 +88,8 @@ uint8_t receiveBuf[200];
 uint16_t receiveBufSize = 0;
 
 int displayState = 0;
+
+uint32_t fixSendInterval = 10000;
 
 #define CRASH_TRACE 0
 
@@ -248,7 +250,7 @@ void loop()
 
   if( CRASH_TRACE ) Serial.print("loop5\n");
 
-    if (millis() - blinkMillis > 10000) {
+    if (millis() - lastFixSendMillis > fixSendInterval) {
       if( CRASH_TRACE ) Serial.print("loop6\n");
 
       loopDisplay();
@@ -265,7 +267,7 @@ void loop()
 
       }
 
-        blinkMillis = millis();
+        lastFixSendMillis = millis();
         switch (rgb) {
         case 0:
             digitalWrite(GreenLed_Pin, LOW);
@@ -823,7 +825,7 @@ void loopGPS()
     while (SerialGPS.available() > 0)
         gps->encode(SerialGPS.read());
 
-    if (millis() - last > 5000) {
+    if (millis() - lastGpsFixMillis > fixSendInterval) {
         if (gps->location.isUpdated()) {
             
             if( ! firstFix )
@@ -961,7 +963,7 @@ void loopGPS()
 
         if (gps->charsProcessed() < 10)
             Serial.println(F("WARNING: No GPS data.  Check wiring."));
-        last = millis();
+        lastGpsFixMillis = millis();
         Serial.println();
     }
 }
