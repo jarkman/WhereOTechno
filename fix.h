@@ -1,6 +1,9 @@
 #ifndef FIX_H
 #define FIX_H
 
+float fmap(float x, float in_min, float in_max, float out_min, float out_max);
+uint32_t getMacAddress();
+
 class Fix
 {
   public:
@@ -22,6 +25,11 @@ class Fix
     return lat != 0 && lng != 0 ;
   }
   
+  double batteryFraction()
+  {
+    return batteryVoltage; // fmap(batteryVoltage, 340, 623 * 0.67, 0.0, 1.0);
+  }
+
   double distanceTo( Fix theirFix )
   {
     return TinyGPSPlus::distanceBetween(lat, lng, theirFix.lat, theirFix.lng);
@@ -55,6 +63,12 @@ class Fix
   if( id != 0x67CDF1D2 && id != 0x52A2DF5C )  // my two t-echo units
   {
     Serial.printf("Wrong id %X, not for us\n", id);
+    return false;
+  }
+
+  if( id == getMacAddress())
+  {
+    Serial.printf("id %X is ours!\n", id);
     return false;
   }
 

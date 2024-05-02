@@ -91,6 +91,8 @@ int displayState = 0;
 
 uint32_t fixSendInterval = 10000;
 
+uint32_t blinkStartMillis = 0;
+
 #define CRASH_TRACE 0
 
 #define DO_SEND 1
@@ -250,48 +252,39 @@ void loop()
 
   if( CRASH_TRACE ) Serial.print("loop5\n");
 
-    if (millis() - lastFixSendMillis > fixSendInterval) {
-      if( CRASH_TRACE ) Serial.print("loop6\n");
+  if (millis() - lastFixSendMillis > fixSendInterval) {
+    if( CRASH_TRACE ) Serial.print("loop6\n");
 
-      loopDisplay();
-      
-      if( CRASH_TRACE ) Serial.print("loop7\n");
+    loopDisplay();
+    
+    if( CRASH_TRACE ) Serial.print("loop7\n");
 
-      if( DO_SEND )
-      {
-        if( CRASH_TRACE ) Serial.print("loop8\n");
+    if( DO_SEND )
+    {
+      if( CRASH_TRACE ) Serial.print("loop8\n");
 
-        loopSender();
+      loopSender();
 
-        if( CRASH_TRACE ) Serial.print("loop9\n");
+      if( CRASH_TRACE ) Serial.print("loop9\n");
 
-      }
-
-        lastFixSendMillis = millis();
-        switch (rgb) {
-        case 0:
-            digitalWrite(GreenLed_Pin, LOW);
-            digitalWrite(RedLed_Pin, HIGH);
-            digitalWrite(BlueLed_Pin, HIGH);
-            break;
-        case 1:
-            digitalWrite(GreenLed_Pin, HIGH);
-            digitalWrite(RedLed_Pin, LOW);
-            digitalWrite(BlueLed_Pin, HIGH);
-            break;
-        case 2:
-            digitalWrite(GreenLed_Pin, HIGH);
-            digitalWrite(RedLed_Pin, HIGH);
-            digitalWrite(BlueLed_Pin, LOW);
-            break;
-        default :
-            break;
-        }
-        rgb++;
-        rgb %= 3;
     }
-  //display->print("hello!")   ;
-  //display->update();
+
+    lastFixSendMillis = millis();
+
+    blinkStartMillis = millis();
+    digitalWrite(GreenLed_Pin, LOW);
+    digitalWrite(RedLed_Pin, HIGH);
+    digitalWrite(BlueLed_Pin, HIGH);
+    
+   
+  }
+
+  if( millis() - blinkStartMillis > 300 ) // short blink every refresh
+  {
+     digitalWrite(GreenLed_Pin, HIGH);
+     digitalWrite(RedLed_Pin, HIGH);
+     digitalWrite(BlueLed_Pin, HIGH);
+  }
   if( CRASH_TRACE ) Serial.print("loop end\n");
 
 }
@@ -400,17 +393,23 @@ void displayMap(Fixes *fixes, Fixes *other, bool drawOther, const char*label)
   {
   // draw us on the map
 
-    for( int i = 0; i < other->numFixes; i ++ )
+    for( int i = other->numFixes - 1; i >= 0; i -- ) // draw 0 last
     {
       if( CRASH_TRACE ) Serial.println("map6");
  
       double mx = fixes->x(other->fixes[i].lng, display->width());
       double my = fixes->y(other->fixes[i].lat, display->height());
     
-      display->fillCircle(mx, my, i == 0 ? 8 : 4, GxEPD_BLACK);
-
-      if( i > 0 )
-       display->drawLine(mx, my, lastX, lastY, GxEPD_BLACK);
+      if( i == 0 )
+      {
+        display->fillCircle(mx, my, 10, GxEPD_WHITE);
+        display->fillCircle(mx, my, 8, GxEPD_BLACK);
+      }
+      else
+      {
+        display->fillCircle(mx, my, 4, GxEPD_BLACK);
+        display->drawLine(mx, my, lastX, lastY, GxEPD_BLACK);
+      }
 
       lastX = mx;
       lastY = my;
@@ -430,7 +429,7 @@ void displayMap(Fixes *fixes, Fixes *other, bool drawOther, const char*label)
   if( CRASH_TRACE ) Serial.println("map8");
  
 
-  for( int i = 0; i < fixes->numFixes; i ++)
+  for( int i = fixes->numFixes - 1; i >= 0; i --)
   {
  
     if( CRASH_TRACE ) Serial.println("map9");
@@ -438,11 +437,16 @@ void displayMap(Fixes *fixes, Fixes *other, bool drawOther, const char*label)
     double x = fixes->x(i, display->width());
     double y = fixes->y(i, display->height());
 
-    display->drawCircle(x,y, i == 0 ? 4 : 2, GxEPD_BLACK);
-
-    if( i > 0 )
+    if( i == 0 )
+    {
+      display->fillCircle(x,y, 6, GxEPD_WHITE);
+      display->drawCircle(x,y, 4, GxEPD_BLACK);
+    }
+    else
+    {
        display->drawLine(x, y, lastX, lastY, GxEPD_BLACK);
-
+       display->drawCircle(x,y, 2, GxEPD_BLACK);
+    }
     lastX = x;
     lastY = y;
 
@@ -479,8 +483,8 @@ void displayFix(Fix fix, const char*label)
 
   display->print("rssi ");
   display->print(fix.rssi, 0);
-  display->print(" V ");
-  display->println(fix.batteryVoltage, 1);
+  display->print(" bat ");
+  display->println(fix.batteryFraction(), 2);
    
 }
 
@@ -595,6 +599,8 @@ void boardInit()
 
     pinMode(UserButton_Pin, INPUT_PULLUP);
     pinMode(Touch_Pin, INPUT_PULLUP);
+
+    //pinMode( Adc_Pin, ANALOG_IN );
 
     int i = 10;
     while (i--) {
@@ -734,6 +740,11 @@ void loopReceive()
                 theirFix.rssi = radio.getRSSI();
                 theirFix.snr = radio.getSNR();
                 
+                Serial.print("temp ");
+                Serial.println(temp.lat);
+
+                Serial.print("their ");
+                Serial.println(theirFix.lat);
 
                 theirFixes->add(theirFix);
               }
@@ -846,7 +857,7 @@ void loopGPS()
         myFix.timeWhenReceived = millis();
         myFix.hdop = gps->hdop.value();
         myFix.satellites = gps->satellites.value();
-        myFix.batteryVoltage = 0.0; //TODO
+        myFix.batteryVoltage = analogRead(Adc_Pin);
       
         myFixes->add(myFix);
 
@@ -984,4 +995,33 @@ void loopGPS()
 }
 
 
+float fmapConstrained(float x, float in_min, float in_max, float out_min, float out_max)
+{
+  float f = fmap( x,  in_min, in_max, out_min, out_max);
+
+  if( f < out_min )
+    f = out_min;
+
+  if( f > out_max )
+    f = out_max;
+
+  return f;
+}
+
+float fmap(float x, float in_min, float in_max, float out_min, float out_max)
+{
+  return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
+}
+
+
+float fconstrain(float f, float out_min, float out_max)
+{
+  if( f < out_min )
+    f = out_min;
+
+  if( f > out_max )
+    f = out_max;
+
+  return f;
+}
 
