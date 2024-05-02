@@ -654,6 +654,7 @@ bool setupLoRa()
     // spreading factor:            9
     // coding rate:                 7
     // sync word:                   0x12 (private network)
+    //    or 0x34 for TTN - see https://www.thethingsnetwork.org/forum/t/should-private-lorawan-networks-use-a-different-sync-word/34496
     // output power:                14 dBm
     // current limit:               60 mA
     // preamble length:             8 symbols
@@ -724,13 +725,18 @@ void loopReceive()
 
             if( receiveBufSize == sizeof(Fix))
             {
-              theirFix.decode(receiveBuf, receiveBufSize);
+              Fix temp;
 
-              theirFix.rssi = radio.getRSSI();
-              theirFix.snr = radio.getSNR();
-              
+              if( temp.decode(receiveBuf, receiveBufSize))
+              {
+                theirFix = temp;
 
-              theirFixes->add(theirFix);
+                theirFix.rssi = radio.getRSSI();
+                theirFix.snr = radio.getSNR();
+                
+
+                theirFixes->add(theirFix);
+              }
             }
             else
             {
@@ -826,26 +832,36 @@ void loopGPS()
         gps->encode(SerialGPS.read());
 
     if (millis() - lastGpsFixMillis > fixSendInterval) {
-        if (gps->location.isUpdated()) {
+
+
+      if( ! firstFix ) // always ignore first fix
+      {
+        // but send every 10s even when not updated
+
+        myFix.id =  getMacAddress();
+        //Serial.printf("sending id %X", getMacAddress());
+        myFix.lat = gps->location.lat();
+        myFix.lng = gps->location.lng();
+        myFix.ageWhenReceived = gps->location.age();
+        myFix.timeWhenReceived = millis();
+        myFix.hdop = gps->hdop.value();
+        myFix.satellites = gps->satellites.value();
+        myFix.batteryVoltage = 0.0; //TODO
+      
+        myFixes->add(myFix);
+
+        lastGpsFixMillis = millis();
+       
+      }
+
+      //if (gps->location.isUpdated()) {
+        firstFix = false;
+      //}
             
-            if( ! firstFix )
-            {
-              
 
-              myFix.id =  getMacAddress();
-              myFix.lat = gps->location.lat();
-              myFix.lng = gps->location.lng();
-              myFix.ageWhenReceived = gps->location.age();
-              myFix.timeWhenReceived = millis();
-              myFix.hdop = gps->hdop.value();
-              myFix.satellites = gps->satellites.value();
-              myFix.batteryVoltage = 0.0; //TODO
             
-              myFixes->add(myFix);
-            }
 
-            firstFix = false;
-
+          if (gps->location.isUpdated()) {
 /*
             SerialMon.print(F("LOCATION   Fix Age="));
             SerialMon.print(gps->location.age());
@@ -963,8 +979,7 @@ void loopGPS()
 
         if (gps->charsProcessed() < 10)
             Serial.println(F("WARNING: No GPS data.  Check wiring."));
-        lastGpsFixMillis = millis();
-        Serial.println();
+        
     }
 }
 

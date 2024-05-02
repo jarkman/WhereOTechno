@@ -32,25 +32,35 @@ class Fix
     return TinyGPSPlus::courseTo(lat, lng, theirFix.lat, theirFix.lng);
   };
 
-  void decode(uint8_t*buf, uint32_t len)
+  bool decode(uint8_t*buf, uint32_t len)
   {
 
   if( len != sizeof( Fix ))
   {
     Serial.println("decode - wrong size");
-    return;
+    return false;
   }
 
   if( 0 != strncmp( (char*) buf, "Techno!", strlen(techno)))
   {
     Serial.println("not techno");
-    return;
+    return false;
   }
+
+
+
 
   memcpy(this, buf, len);
 
+  if( id != 0x67CDF1D2 && id != 0x52A2DF5C )  // my two t-echo units
+  {
+    Serial.printf("Wrong id %X, not for us\n", id);
+    return false;
+  }
+
   timeWhenReceived = millis(); // so we can calculate age in our own timebase
   
+  return true;
 };
 
 uint32_t age()
