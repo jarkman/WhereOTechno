@@ -68,7 +68,7 @@ class Fix
 
   if( id == getMacAddress())
   {
-    Serial.printf("id %X is ours!\n", id);
+    Serial.printf("id %X is ours (%X)!\n", id, getMacAddress());
     return false;
   }
 

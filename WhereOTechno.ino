@@ -95,8 +95,8 @@ uint32_t blinkStartMillis = 0;
 
 #define CRASH_TRACE 0
 
-#define DO_SEND 1
-#define DO_RECEIVE 1
+bool doSend = true;
+bool doReceive = true;
 
 
 void setup()
@@ -104,10 +104,25 @@ void setup()
     myFixes = new Fixes();
     theirFixes = new Fixes();
 
-    Serial.begin(115200);
-    delay(4000);
-    boardInit();
-    delay(200);
+  if( getMacAddress() == 0x67CDF1D2 )
+  {
+    doSend = true;
+    doReceive = false;
+    Serial.println("I'm a sender");
+  }
+
+  if( getMacAddress() == 0x52A2DF5C )
+  {
+    doSend = false;
+    doReceive = true;
+
+    Serial.println("I'm a receiver");
+  }
+
+  Serial.begin(115200);
+  delay(4000);
+  boardInit();
+  delay(200);
    
 }
 
@@ -157,7 +172,7 @@ bool loopTouchPin()
 void nextDisplayState()
 {
 
-  if(DO_RECEIVE && ! DO_SEND)
+  if(doReceive && ! doSend)
   {
     switch( displayState )
     {
@@ -170,25 +185,25 @@ void nextDisplayState()
         break;
 
       case DISPLAY_STATE_FIXES:
+        displayState = DISPLAY_STATE_MY_FIX;
+        break;
+      
+      case DISPLAY_STATE_MY_FIX:
         displayState = DISPLAY_STATE_THEIR_FIX;
         break;
 
-      case DISPLAY_STATE_MY_FIX:
       case DISPLAY_STATE_THEIR_FIX:
       default:
         displayState = DISPLAY_STATE_THEIR_MAP;
         break; 
     }
   }
-  else if(!DO_RECEIVE && DO_SEND)
+  else if(!doReceive && doSend)
   {
     switch( displayState )
     {
       case DISPLAY_STATE_MY_MAP:
       case DISPLAY_STATE_THEIR_MAP:
-        displayState = DISPLAY_STATE_FIXES;
-        break;
-
       case DISPLAY_STATE_FIXES:
        displayState = DISPLAY_STATE_MY_FIX;
         break;
@@ -228,13 +243,16 @@ void nextDisplayState()
   }
 }
 
+uint32_t lastDisplayMillis = 0;
+uint32_t displayInterval = 10000;
+
 void loop()
 {
 
   if( CRASH_TRACE ) Serial.print("loop1\n");
 
 
-  if( DO_RECEIVE )
+  if( doReceive )
     loopReceive();
 
   if( CRASH_TRACE ) Serial.print("loop2\n");
@@ -247,37 +265,16 @@ void loop()
 
   if( CRASH_TRACE ) Serial.print("loop4\n");
 
-  if( refreshDisplay)
+  if( refreshDisplay || millis() - lastDisplayMillis > displayInterval)
+  {
     loopDisplay();
-
-  if( CRASH_TRACE ) Serial.print("loop5\n");
-
-  if (millis() - lastFixSendMillis > fixSendInterval) {
-    if( CRASH_TRACE ) Serial.print("loop6\n");
-
-    loopDisplay();
-    
-    if( CRASH_TRACE ) Serial.print("loop7\n");
-
-    if( DO_SEND )
-    {
-      if( CRASH_TRACE ) Serial.print("loop8\n");
-
-      loopSender();
-
-      if( CRASH_TRACE ) Serial.print("loop9\n");
-
-    }
-
-    lastFixSendMillis = millis();
-
     blinkStartMillis = millis();
+    lastDisplayMillis = millis();
     digitalWrite(GreenLed_Pin, LOW);
     digitalWrite(RedLed_Pin, HIGH);
     digitalWrite(BlueLed_Pin, HIGH);
-    
-   
   }
+  
 
   if( millis() - blinkStartMillis > 300 ) // short blink every refresh
   {
@@ -285,6 +282,22 @@ void loop()
      digitalWrite(RedLed_Pin, HIGH);
      digitalWrite(BlueLed_Pin, HIGH);
   }
+
+  if( doSend )
+  {
+  if (millis() - lastFixSendMillis > fixSendInterval) 
+  {
+
+    if( CRASH_TRACE ) Serial.print("loop8\n");
+
+    loopSender();
+
+    if( CRASH_TRACE ) Serial.print("loop9\n");
+
+    lastFixSendMillis = millis() + random(2000); // randomise sending so we don't risk overriding the other end   
+  }
+}
+ 
   if( CRASH_TRACE ) Serial.print("loop end\n");
 
 }
@@ -686,7 +699,7 @@ bool setupLoRa()
         while (true);
     }
 
-    if( DO_RECEIVE )
+    if( doReceive )
     {
       // set the function that will be called
       // when new packet is received
