@@ -27,7 +27,7 @@ class Fix
   
   double batteryFraction()
   {
-    return batteryVoltage; // fmap(batteryVoltage, 340, 623 * 0.67, 0.0, 1.0);
+    return  fmap(batteryVoltage, 340, 623, 0.0, 1.0);
   }
 
   double distanceTo( Fix theirFix )

@@ -402,35 +402,7 @@ void displayMap(Fixes *fixes, Fixes *other, bool drawOther, const char*label)
   double lastX = 0;
   double lastY = 0;
 
-  if( drawOther )
-  {
-  // draw us on the map
-
-    for( int i = other->numFixes - 1; i >= 0; i -- ) // draw 0 last
-    {
-      if( CRASH_TRACE ) Serial.println("map6");
- 
-      double mx = fixes->x(other->fixes[i].lng, display->width());
-      double my = fixes->y(other->fixes[i].lat, display->height());
-    
-      if( i == 0 )
-      {
-        display->fillCircle(mx, my, 10, GxEPD_WHITE);
-        display->fillCircle(mx, my, 8, GxEPD_BLACK);
-      }
-      else
-      {
-        display->fillCircle(mx, my, 4, GxEPD_BLACK);
-        display->drawLine(mx, my, lastX, lastY, GxEPD_BLACK);
-      }
-
-      lastX = mx;
-      lastY = my;
-    }
-
-    
-  }
-
+  
   if( CRASH_TRACE ) Serial.println("map7");
  
   // draw a 10m square in the screen center
@@ -467,6 +439,35 @@ void displayMap(Fixes *fixes, Fixes *other, bool drawOther, const char*label)
  
   }
 
+if( drawOther )
+  {
+  // draw us on the map
+
+    for( int i = min( 20, other->numFixes - 1); i >= 0; i -- ) // draw 0 last
+    {
+      if( CRASH_TRACE ) Serial.println("map6");
+ 
+      double mx = fixes->x(other->fixes[i].lng, display->width());
+      double my = fixes->y(other->fixes[i].lat, display->height());
+    
+      if( i == 0 )
+      {
+        display->fillCircle(mx, my, 10, GxEPD_WHITE);
+        display->fillCircle(mx, my, 8, GxEPD_BLACK);
+      }
+      else
+      {
+        display->fillCircle(mx, my, 4, GxEPD_BLACK);
+        display->drawLine(mx, my, lastX, lastY, GxEPD_BLACK);
+      }
+
+      lastX = mx;
+      lastY = my;
+    }
+
+    
+  }
+
   if( CRASH_TRACE ) Serial.println("map end");
  
   //Serial.println("mapped");
@@ -489,15 +490,17 @@ void displayFix(Fix fix, const char*label)
   display->print(fix.satellites);
   display->println("sats");
   
-  display->print("hdp ");
+  display->print("hdp");
   display->print(fix.hdop);
-  display->print(" snr ");
+  display->print(" snr");
   display->println(fix.snr, 0);
 
-  display->print("rssi ");
+  display->print("rssi");
   display->print(fix.rssi, 0);
-  display->print(" bat ");
-  display->println(fix.batteryFraction(), 2);
+  display->print(" ");
+  display->print((int) (100.0 *fix.batteryFraction()));
+  display->print("%");
+ 
    
 }
 
