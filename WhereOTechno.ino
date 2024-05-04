@@ -66,6 +66,8 @@ Fix theirFix;
 Fixes* myFixes;
 Fixes* theirFixes;
 
+double maxRange = 0;
+
 char* techno = (char*) "Techno!";
 
 
@@ -420,7 +422,9 @@ void displayMap(Fixes *fixes, Fixes *other, bool drawOther, const char*label)
   display->drawRect(r1, r1, cw, cw, 0);
 
   if( CRASH_TRACE ) Serial.println("map8");
- 
+
+  bool first = true; 
+
   int i = fixes->numFixes - 1;
   while( i >= 0 )
   {
@@ -430,12 +434,7 @@ void displayMap(Fixes *fixes, Fixes *other, bool drawOther, const char*label)
     double x = fixes->x(i);
     double y = fixes->y(i);
 
-    if( i == 0 )
-    {
-      display->fillCircle(x,y, 6, GxEPD_WHITE);
-      display->drawCircle(x,y, 4, GxEPD_BLACK);
-    }
-    else
+    if( ! first )
     {
       if( i < 4 )
       { // highlight the last few segments
@@ -445,20 +444,35 @@ void displayMap(Fixes *fixes, Fixes *other, bool drawOther, const char*label)
         display->drawLine(x, y-1, lastX, lastY-1, GxEPD_WHITE);
       }
        display->drawLine(x, y, lastX, lastY, GxEPD_BLACK);
-       display->drawCircle(x,y, 2, GxEPD_BLACK);
+       
+
+      if( i == 0 )
+      {
+        display->fillCircle(x,y, 6, GxEPD_WHITE);
+        display->drawCircle(x,y, 4, GxEPD_BLACK);
+        
+      }
+      else
+      {
+        display->drawCircle(x,y, 2, GxEPD_BLACK);
+      }
     }
+
     lastX = x;
     lastY = y;
 
     if( CRASH_TRACE ) Serial.println("map9");
  
   i--;
+  first = false;
   }
 
+first = true;
 if( drawOther )
   {
   // draw us on the map
 
+    
     i = min( 20, other->numFixes - 1);
     while( i >= 0 ) // draw 0 last
     {
@@ -467,6 +481,18 @@ if( drawOther )
       double mx = fixes->x(other->fixes[i].lng);
       double my = fixes->y(other->fixes[i].lat);
     
+      if( ! first )
+      {
+        if( i < 4 )
+        { // highlight the last few segments
+          display->drawLine(mx+1, my, lastX+1, lastY, GxEPD_WHITE);
+          display->drawLine(mx-1, my, lastX-1, lastY, GxEPD_WHITE);
+          display->drawLine(mx, my+1, lastX, lastY+1, GxEPD_WHITE);
+          display->drawLine(mx, my-1, lastX, lastY-1, GxEPD_WHITE);
+        }
+        display->drawLine(mx, my, lastX, lastY, GxEPD_BLACK);
+      }
+
       if( i == 0 )
       {
         display->fillCircle(mx, my, 10, GxEPD_WHITE);
@@ -475,21 +501,13 @@ if( drawOther )
       else
       {
         display->fillCircle(mx, my, 4, GxEPD_BLACK);
-
-      if( i < 4 )
-      { // highlight the last few segments
-        display->drawLine(mx+1, my, lastX+1, lastY, GxEPD_WHITE);
-        display->drawLine(mx-1, my, lastX-1, lastY, GxEPD_WHITE);
-        display->drawLine(mx, my+1, lastX, lastY+1, GxEPD_WHITE);
-        display->drawLine(mx, my-1, lastX, lastY-1, GxEPD_WHITE);
-      }
-        display->drawLine(mx, my, lastX, lastY, GxEPD_BLACK);
       }
 
       lastX = mx;
       lastY = my;
 
       i --;
+      first = false;
     }
 
     
@@ -533,27 +551,31 @@ void displayFix(Fix fix, const char*label)
 
 void displayFixes()
 {
-    display->fillScreen(GxEPD_WHITE);
-    //display->drawExampleBitmap(BitmapExample1, 0, 0, GxEPD_WIDTH, GxEPD_HEIGHT, GxEPD_BLACK);
-    display->setCursor(0,20);
-    //display->print("age ");
-   //display->println(myFixAge/1000);
-   display->print("me ");
-   display->println(myFix.lat, 6);
+  display->fillScreen(GxEPD_WHITE);
+  //display->drawExampleBitmap(BitmapExample1, 0, 0, GxEPD_WIDTH, GxEPD_HEIGHT, GxEPD_BLACK);
+  display->setCursor(0,20);
+  //display->print("age ");
+  //display->println(myFixAge/1000);
+  display->print("me ");
+  display->println(myFix.lat, 6);
   display->print(", ");
-   display->println(myFix.lng, 6);
+  display->println(myFix.lng, 6);
 
-   display->print("t ");
-   display->println(theirFix.lat, 6);
+  display->print("t ");
+  display->println(theirFix.lat, 6);
   display->print(", ");
-   display->println(theirFix.lng, 6);
+  display->println(theirFix.lng, 6);
 
-  
 
- display->print(myFix.distanceTo(theirFix), 1);
-   display->println(" m");
-    display->print(myFix.headingTo(theirFix), 1);
-   display->println(" deg");
+
+  display->print(myFix.distanceTo(theirFix), 1);
+  display->println(" m");
+  display->print(myFix.headingTo(theirFix), 1);
+  display->println(" deg");
+
+  display->print("max ");
+  display->print(maxRange, 0);
+  display->println(" m");
     
 }
 
@@ -788,6 +810,12 @@ void loopReceive()
 
                 Serial.print("their ");
                 Serial.println(theirFix.lat);
+
+                if( myFix.goodFix() && theirFix.goodFix())
+                {
+                  double range = myFix.distanceTo(theirFix);
+                  maxRange = max(maxRange, range);
+                }
 
                 theirFixes->add(theirFix);
               }
