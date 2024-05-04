@@ -31,6 +31,9 @@ class Fixes
 
   double range = 0.0;
 
+  double screenWidth = 0;
+  double screenHeight = 0;
+
   bool add( Fix fix )
   {
     //Serial.println("add");
@@ -51,7 +54,7 @@ class Fixes
       }
 
 
-      if( fix.hdop > 160 )
+      if( fix.hdop > 200 )
       {
         Serial.println("bad hdop");
         return false;
@@ -73,22 +76,31 @@ class Fixes
     return true;
   };
 
-  void calcScale(Fix other)
+  void calcScale(Fix other, int _screenWidth, int _screenHeight)
   {
+    bool started = false;
+
+    screenWidth = _screenWidth;
+    screenHeight = _screenHeight;
+
     for( int i = 0; i < numFixes; i ++ )
     {
-      if( i == 0 )
+      if( fixes[i].goodFix())
       {
-        minLat = fixes[i].lat;
-        maxLat = fixes[i].lat;
-        minLng = fixes[i].lng;
-        maxLng = fixes[i].lng;
-      }
+        if(! started )
+        {
+          minLat = fixes[i].lat;
+          maxLat = fixes[i].lat;
+          minLng = fixes[i].lng;
+          maxLng = fixes[i].lng;
+          started = true;
+        }
 
-      minLat = min(minLat, fixes[i].lat);
-      maxLat = max(maxLat, fixes[i].lat);
-      minLng = min(minLng, fixes[i].lng);
-      maxLng = max(maxLng, fixes[i].lng);
+        minLat = min(minLat, fixes[i].lat);
+        maxLat = max(maxLat, fixes[i].lat);
+        minLng = min(minLng, fixes[i].lng);
+        maxLng = max(maxLng, fixes[i].lng);
+      }
     }
 
     // make room to display us on the map too
@@ -102,6 +114,14 @@ class Fixes
 
     range = max(maxLat-minLat,maxLng-minLng);
 
+
+    Serial.print("range is ");
+    Serial.print(range, 6);
+    
+    Serial.print(" deg which is ");
+    Serial.print(mForDeg(range));
+    Serial.println(" m");
+    
     double minRangeM = 10.0;
     float minRangeDeg = degForM(minRangeM);
     if( range < minRangeDeg )
@@ -121,29 +141,39 @@ class Fixes
     return deg;
   };
 
-  double x( int i, double screenWidth )
+  double mForDeg(double deg)
   {
-    return x(fixes[i].lng, screenWidth);
+    // one degree of lat is 111,111m
+    float mPerDeg = 111111;
+    
+    float m = deg * mPerDeg;
+
+    return m;
   };
 
-  double y( int i, double screenHeight )
+  double x( int i )
   {
-    return y(fixes[i].lat, screenHeight);
+    return x(fixes[i].lng);
+  };
+
+  double y( int i )
+  {
+    return y(fixes[i].lat);
   };
   
-  double pixForM(float m, double screenWidth)
+  double pixForM(float m)
   {
     double deg = degForM(m);
     double p = screenWidth * deg/range;
     return p;
   }
 
-  double x( double lng, double screenWidth )
+  double x( double lng )
   {
     return screenWidth/2.0 + screenWidth * (lng - ((minLng+maxLng)/2.0))/range;
   };
 
-  double y( double lat, double screenHeight )
+  double y( double lat )
   {
     return screenHeight - (screenHeight/2.0 + screenHeight * (lat - ((minLat+maxLat)/2.0))/range);
   };

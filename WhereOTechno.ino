@@ -149,7 +149,7 @@ bool loopTouchPin()
 
   bool refreshDisplay = false;
 
-  bool b = digitalRead(Touch_Pin);
+  bool b = digitalRead(UserButton_Pin);
 
   if( b && ! lastB )
   {
@@ -394,7 +394,7 @@ void displayMap(Fixes *fixes, Fixes *other, bool drawOther, const char*label)
   //display->drawCircle(30,30, 10, GxEPD_BLACK); 
   //display->drawCircle(50,50,20,GxEPD_BLACK); 
 
-  fixes->calcScale(myFix);
+  fixes->calcScale(myFix, display->width(), display->height());
 
   if( CRASH_TRACE ) Serial.println("map5");
  
@@ -406,21 +406,29 @@ void displayMap(Fixes *fixes, Fixes *other, bool drawOther, const char*label)
   if( CRASH_TRACE ) Serial.println("map7");
  
   // draw a 10m square in the screen center
-  double cw = fixes->pixForM(10, display->width());
+  double cw = fixes->pixForM(10);
   double r1 = display->width()/2.0 - cw/2.0;
   
   display->drawRect(r1, r1, cw, cw, 0);
 
+  cw = fixes->pixForM(100);
+  r1 = display->width()/2.0 - cw/2.0;
+  display->drawRect(r1, r1, cw, cw, 0);
+
+  cw = fixes->pixForM(1000);
+  r1 = display->width()/2.0 - cw/2.0;
+  display->drawRect(r1, r1, cw, cw, 0);
+
   if( CRASH_TRACE ) Serial.println("map8");
  
-
-  for( int i = fixes->numFixes - 1; i >= 0; i --)
+  int i = fixes->numFixes - 1;
+  while( i >= 0 )
   {
  
     if( CRASH_TRACE ) Serial.println("map9");
  
-    double x = fixes->x(i, display->width());
-    double y = fixes->y(i, display->height());
+    double x = fixes->x(i);
+    double y = fixes->y(i);
 
     if( i == 0 )
     {
@@ -429,6 +437,13 @@ void displayMap(Fixes *fixes, Fixes *other, bool drawOther, const char*label)
     }
     else
     {
+      if( i < 4 )
+      { // highlight the last few segments
+        display->drawLine(x+1, y, lastX+1, lastY, GxEPD_WHITE);
+        display->drawLine(x-1, y, lastX-1, lastY, GxEPD_WHITE);
+        display->drawLine(x, y+1, lastX, lastY+1, GxEPD_WHITE);
+        display->drawLine(x, y-1, lastX, lastY-1, GxEPD_WHITE);
+      }
        display->drawLine(x, y, lastX, lastY, GxEPD_BLACK);
        display->drawCircle(x,y, 2, GxEPD_BLACK);
     }
@@ -437,18 +452,20 @@ void displayMap(Fixes *fixes, Fixes *other, bool drawOther, const char*label)
 
     if( CRASH_TRACE ) Serial.println("map9");
  
+  i--;
   }
 
 if( drawOther )
   {
   // draw us on the map
 
-    for( int i = min( 20, other->numFixes - 1); i >= 0; i -- ) // draw 0 last
+    i = min( 20, other->numFixes - 1);
+    while( i >= 0 ) // draw 0 last
     {
       if( CRASH_TRACE ) Serial.println("map6");
  
-      double mx = fixes->x(other->fixes[i].lng, display->width());
-      double my = fixes->y(other->fixes[i].lat, display->height());
+      double mx = fixes->x(other->fixes[i].lng);
+      double my = fixes->y(other->fixes[i].lat);
     
       if( i == 0 )
       {
@@ -458,11 +475,21 @@ if( drawOther )
       else
       {
         display->fillCircle(mx, my, 4, GxEPD_BLACK);
+
+      if( i < 4 )
+      { // highlight the last few segments
+        display->drawLine(mx+1, my, lastX+1, lastY, GxEPD_WHITE);
+        display->drawLine(mx-1, my, lastX-1, lastY, GxEPD_WHITE);
+        display->drawLine(mx, my+1, lastX, lastY+1, GxEPD_WHITE);
+        display->drawLine(mx, my-1, lastX, lastY-1, GxEPD_WHITE);
+      }
         display->drawLine(mx, my, lastX, lastY, GxEPD_BLACK);
       }
 
       lastX = mx;
       lastY = my;
+
+      i --;
     }
 
     
@@ -858,33 +885,35 @@ void loopGPS()
     while (SerialGPS.available() > 0)
         gps->encode(SerialGPS.read());
 
-    if (millis() - lastGpsFixMillis > fixSendInterval) {
+    if (gps->location.isUpdated())
+    {
+      if (millis() - lastGpsFixMillis > fixSendInterval) {
 
 
-      if( ! firstFix ) // always ignore first fix
-      {
-        // but send every 10s even when not updated
+        if( ! firstFix ) // always ignore first fix
+        {
+          // but send every 10s even when not updated
 
-        myFix.id =  getMacAddress();
-        //Serial.printf("sending id %X", getMacAddress());
-        myFix.lat = gps->location.lat();
-        myFix.lng = gps->location.lng();
-        myFix.ageWhenReceived = gps->location.age();
-        myFix.timeWhenReceived = millis();
-        myFix.hdop = gps->hdop.value();
-        myFix.satellites = gps->satellites.value();
-        myFix.batteryVoltage = analogRead(Adc_Pin);
+          myFix.id =  getMacAddress();
+          //Serial.printf("sending id %X", getMacAddress());
+          myFix.lat = gps->location.lat();
+          myFix.lng = gps->location.lng();
+          myFix.ageWhenReceived = gps->location.age();
+          myFix.timeWhenReceived = millis();
+          myFix.hdop = gps->hdop.value();
+          myFix.satellites = gps->satellites.value();
+          myFix.batteryVoltage = analogRead(Adc_Pin);
+        
+          myFixes->add(myFix);
+
+          lastGpsFixMillis = millis();
+        
+        }
+
       
-        myFixes->add(myFix);
-
-        lastGpsFixMillis = millis();
-       
-      }
-
-      //if (gps->location.isUpdated()) {
         firstFix = false;
-      //}
-            
+      
+    }        
 
             
 
