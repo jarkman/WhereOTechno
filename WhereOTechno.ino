@@ -94,6 +94,7 @@ int displayState = 0;
 uint32_t fixSendInterval = 10000;
 
 uint32_t blinkStartMillis = 0;
+uint32_t bootMillis = 0;
 
 #define CRASH_TRACE 0
 
@@ -103,8 +104,10 @@ bool doReceive = true;
 
 void setup()
 {
-    myFixes = new Fixes();
-    theirFixes = new Fixes();
+  bootMillis = millis();
+
+  myFixes = new Fixes();
+  theirFixes = new Fixes();
 
   if( getMacAddress() == 0x67CDF1D2 )
   {
@@ -389,7 +392,7 @@ void displayMap(Fixes *fixes, Fixes *other, bool drawOther, const char*label)
   if( CRASH_TRACE ) Serial.println("map3");
  
   display->print(fixes->numFixes);
-  display->print(")");
+  display->print(") ");
   
   if( CRASH_TRACE ) Serial.println("map4");
  
@@ -397,6 +400,10 @@ void displayMap(Fixes *fixes, Fixes *other, bool drawOther, const char*label)
   //display->drawCircle(50,50,20,GxEPD_BLACK); 
 
   fixes->calcScale(myFix, display->width(), display->height());
+
+  display->print(fixes->screenWidthInM,0);
+  display->print("m");
+
 
   if( CRASH_TRACE ) Serial.println("map5");
  
@@ -431,83 +438,97 @@ void displayMap(Fixes *fixes, Fixes *other, bool drawOther, const char*label)
  
     if( CRASH_TRACE ) Serial.println("map9");
  
-    double x = fixes->x(i);
-    double y = fixes->y(i);
-
-    if( ! first )
+   
+   
+    if( fixes->fixes[i].goodFix())
     {
-      if( i < 4 )
-      { // highlight the last few segments
-        display->drawLine(x+1, y, lastX+1, lastY, GxEPD_WHITE);
-        display->drawLine(x-1, y, lastX-1, lastY, GxEPD_WHITE);
-        display->drawLine(x, y+1, lastX, lastY+1, GxEPD_WHITE);
-        display->drawLine(x, y-1, lastX, lastY-1, GxEPD_WHITE);
-      }
-       display->drawLine(x, y, lastX, lastY, GxEPD_BLACK);
-       
+      double x = fixes->x(i);
+      double y = fixes->y(i);
+
+      if( ! first )
+      {
+        if( i < 4 )
+        { // highlight the last few segments
+          display->drawLine(x+1, y, lastX+1, lastY, GxEPD_WHITE);
+          display->drawLine(x-1, y, lastX-1, lastY, GxEPD_WHITE);
+          display->drawLine(x, y+1, lastX, lastY+1, GxEPD_WHITE);
+          display->drawLine(x, y-1, lastX, lastY-1, GxEPD_WHITE);
+        }
+        display->drawLine(x, y, lastX, lastY, GxEPD_BLACK);
+
+      }  
 
       if( i == 0 )
       {
-        display->fillCircle(x,y, 6, GxEPD_WHITE);
-        display->drawCircle(x,y, 4, GxEPD_BLACK);
+        display->fillCircle(x,y, 8, GxEPD_WHITE);
+        display->drawCircle(x,y, 6, GxEPD_BLACK);
         
       }
       else
       {
         display->drawCircle(x,y, 2, GxEPD_BLACK);
       }
-    }
 
-    lastX = x;
-    lastY = y;
+      lastX = x;
+      lastY = y;
+      first = false;
+    
+
+      
+    }
 
     if( CRASH_TRACE ) Serial.println("map9");
  
-  i--;
-  first = false;
+    i--;
+    
   }
 
-first = true;
-if( drawOther )
+  first = true;
+  if( drawOther )
   {
   // draw us on the map
 
     
-    i = min( 20, other->numFixes - 1);
+    i = min( 10, other->numFixes - 1);
     while( i >= 0 ) // draw 0 last
     {
       if( CRASH_TRACE ) Serial.println("map6");
  
-      double mx = fixes->x(other->fixes[i].lng);
-      double my = fixes->y(other->fixes[i].lat);
+     
+      if( other->fixes[i].goodFix())
+      {
+        double mx = fixes->x(other->fixes[i].lng);
+        double my = fixes->y(other->fixes[i].lat);
     
-      if( ! first )
-      {
-        if( i < 4 )
-        { // highlight the last few segments
-          display->drawLine(mx+1, my, lastX+1, lastY, GxEPD_WHITE);
-          display->drawLine(mx-1, my, lastX-1, lastY, GxEPD_WHITE);
-          display->drawLine(mx, my+1, lastX, lastY+1, GxEPD_WHITE);
-          display->drawLine(mx, my-1, lastX, lastY-1, GxEPD_WHITE);
+        if( ! first )
+        {
+          if( i < 2 )
+          { // highlight the last few segments
+            display->drawLine(mx+1, my, lastX+1, lastY, GxEPD_WHITE);
+            display->drawLine(mx-1, my, lastX-1, lastY, GxEPD_WHITE);
+            display->drawLine(mx, my+1, lastX, lastY+1, GxEPD_WHITE);
+            display->drawLine(mx, my-1, lastX, lastY-1, GxEPD_WHITE);
+          }
+          display->drawLine(mx, my, lastX, lastY, GxEPD_BLACK);
         }
-        display->drawLine(mx, my, lastX, lastY, GxEPD_BLACK);
-      }
 
-      if( i == 0 )
-      {
-        display->fillCircle(mx, my, 10, GxEPD_WHITE);
-        display->fillCircle(mx, my, 8, GxEPD_BLACK);
-      }
-      else
-      {
-        display->fillCircle(mx, my, 4, GxEPD_BLACK);
-      }
+        if( i == 0 )
+        {
+          display->fillCircle(mx, my, 8, GxEPD_WHITE);
+          display->fillCircle(mx, my, 6, GxEPD_BLACK);
+        }
+        else
+        {
+          display->fillCircle(mx, my, 2, GxEPD_BLACK);
+        }
 
-      lastX = mx;
-      lastY = my;
+        lastX = mx;
+        lastY = my;
+        first = false;
+      }
 
       i --;
-      first = false;
+      
     }
 
     
@@ -544,7 +565,11 @@ void displayFix(Fix fix, const char*label)
   display->print(fix.rssi, 0);
   display->print(" ");
   display->print((int) (100.0 *fix.batteryFraction()));
-  display->print("%");
+  display->println("%");
+  
+  display->print("up ");
+  display->print(fix.uptime/1000);
+  display->println("s");
  
    
 }
@@ -931,6 +956,7 @@ void loopGPS()
           myFix.hdop = gps->hdop.value();
           myFix.satellites = gps->satellites.value();
           myFix.batteryVoltage = analogRead(Adc_Pin);
+          myFix.uptime = millis() - bootMillis;
         
           myFixes->add(myFix);
 

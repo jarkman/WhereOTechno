@@ -33,6 +33,7 @@ class Fixes
 
   double screenWidth = 0;
   double screenHeight = 0;
+  double screenWidthInM = 0;
 
   bool add( Fix fix )
   {
@@ -46,7 +47,7 @@ class Fixes
         return false;
       }
 
-      if( fix.distanceTo(fixes[0])< 1) // for small motions just replace the old fix with a new one TODO =- increase
+      if( fix.distanceTo(fixes[0])< 5) // for small motions just replace the old fix with a new one
       {
         Serial.println("too close");
         fixes[0] = fix;
@@ -128,6 +129,8 @@ class Fixes
       range = minRangeDeg ; // protect from div/0
 
     range = range * 1.2; //give us a margin
+
+    screenWidthInM = mForDeg(range);
 
   };
 

@@ -19,10 +19,11 @@ class Fix
   float batteryVoltage = 0;
   float rssi = 0;
   float snr = 0;
+  uint32_t uptime;
 
   bool goodFix()
   {
-    return lat != 0 && lng != 0 ;
+    return lat != 0 && lng != 0 && hdop < 165;
   }
   
   double batteryFraction()
