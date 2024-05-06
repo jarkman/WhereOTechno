@@ -91,7 +91,7 @@ uint16_t receiveBufSize = 0;
 
 int displayState = 0;
 
-uint32_t fixSendInterval = 10000;
+uint32_t fixSendInterval = 30000;
 
 uint32_t blinkStartMillis = 0;
 uint32_t bootMillis = 0;
@@ -199,7 +199,7 @@ void nextDisplayState()
 
       case DISPLAY_STATE_THEIR_FIX:
       default:
-        displayState = DISPLAY_STATE_THEIR_MAP;
+        displayState = DISPLAY_STATE_MY_MAP;
         break; 
     }
   }
@@ -447,7 +447,7 @@ void displayMap(Fixes *fixes, Fixes *other, bool drawOther, const char*label)
 
       if( ! first )
       {
-        if( i < 4 )
+        if( i < 10 )
         { // highlight the last few segments
           display->drawLine(x+1, y, lastX+1, lastY, GxEPD_WHITE);
           display->drawLine(x-1, y, lastX-1, lastY, GxEPD_WHITE);
@@ -489,7 +489,7 @@ void displayMap(Fixes *fixes, Fixes *other, bool drawOther, const char*label)
   // draw us on the map
 
     
-    i = min( 10, other->numFixes - 1);
+    i = min( 20, other->numFixes - 1);
     while( i >= 0 ) // draw 0 last
     {
       if( CRASH_TRACE ) Serial.println("map6");
@@ -502,7 +502,7 @@ void displayMap(Fixes *fixes, Fixes *other, bool drawOther, const char*label)
     
         if( ! first )
         {
-          if( i < 2 )
+          if( i < 10 )
           { // highlight the last few segments
             display->drawLine(mx+1, my, lastX+1, lastY, GxEPD_WHITE);
             display->drawLine(mx-1, my, lastX-1, lastY, GxEPD_WHITE);

@@ -128,7 +128,7 @@ class Fixes
     if( range < minRangeDeg )
       range = minRangeDeg ; // protect from div/0
 
-    range = range * 1.2; //give us a margin
+    range = range * 1.1; //give us a margin
 
     screenWidthInM = mForDeg(range);
 
