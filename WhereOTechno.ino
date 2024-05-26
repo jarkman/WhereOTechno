@@ -3,6 +3,10 @@
 
  runs on Lilygo T-Echo
 
+add https://adafruit.github.io/arduino-board-index/package_adafruit_index.json
+to board manager list
+
+install 'Adafruit nRF52 by Adafruit' (not 'Arduino nRF52 boards')
  select Nordic nRF52840 DK something
 
  
@@ -18,7 +22,7 @@
 #include <SPI.h>
 #include <Wire.h>
 
-#include <GxEPD.h>
+#include <GxEPD.h> // GxEPD by Jean-Marc Zingg
 //#include <GxGDEP015OC1/GxGDEP015OC1.h>    // 1.54" b/w
 //#include <GxGDEH0154D67/GxGDEH0154D67.h>  // 1.54" b/w
 #include <GxDEPG0150BN/GxDEPG0150BN.h>  // 1.54" b/w 
@@ -28,9 +32,9 @@
 #include <GxIO/GxIO_SPI/GxIO_SPI.h>
 #include <GxIO/GxIO.h>
 
-#include <TinyGPS++.h>
+#include <TinyGPS++.h> // TinyGPSPlus by Mikal Hart
 
-#include <RadioLib.h>
+#include <RadioLib.h> // RadioLib by Jan Gromes 6.5.0
 
 #include "fix.h"
 #include "fixes.h"
